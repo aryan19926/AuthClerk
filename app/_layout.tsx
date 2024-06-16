@@ -5,8 +5,50 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
-
+import * as SecureStore from "expo-secure-store"
+import {Text} from "react-native"
+import SignUpScreen from '@/components/SignUpScreen';
+import SignInScreen from '@/components/SignInScreen';
+import SignInWithOAuth from '@/components/SignInWithOAuth';
+import { View, Button } from 'react-native';
 import { useColorScheme } from '@/components/useColorScheme';
+import { ClerkProvider, useAuth, SignedIn, SignedOut } from '@clerk/clerk-expo';
+
+const PUBLISHABLE_KEY=process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+const tokenCache = {
+  async getToken(key: string) {
+    try {
+      return SecureStore.getItemAsync(key);
+    } catch (err) {
+      return null;
+    }
+  },
+  async saveToken(key: string, value: string) {
+    try {
+      return SecureStore.setItemAsync(key, value);
+    } catch (err) {
+      return;
+    }
+  },
+};
+
+ const SignOut = () => {
+  const { isLoaded,signOut } = useAuth();
+  if (!isLoaded) {
+    return null;
+  }
+  return (
+    <View>
+      <Button
+        title="Sign Out"
+        onPress={() => {
+          signOut();
+        }}
+      />
+    </View>
+  );
+};
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -42,18 +84,33 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (<ClerkProvider publishableKey={PUBLISHABLE_KEY!} tokenCache={tokenCache}>
+  <RootLayoutNav />
+  </ClerkProvider>);
 }
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const {}=useAuth();
 
   return (
+    <>
+    <SignedIn>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack screenOptions={{
+        
+      }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        
       </Stack>
     </ThemeProvider>
+    <SignOut/>
+    </SignedIn>
+        <SignedOut>
+        <SignInWithOAuth/>
+        </SignedOut>
+    </>
+    
   );
 }
